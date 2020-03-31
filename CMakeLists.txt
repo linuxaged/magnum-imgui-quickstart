@@ -53,8 +53,9 @@ else()
 endif()
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
+corrade_add_resource(Resources resources.conf)
+add_executable(magnum-imgui WIN32 ${Resources} ImGuiExample.cpp)
 
-add_executable(magnum-imgui WIN32 ImGuiExample.cpp)
 target_link_libraries(magnum-imgui PRIVATE
     Corrade::Main
     Magnum::Application
