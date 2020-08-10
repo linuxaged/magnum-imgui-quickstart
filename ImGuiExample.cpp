@@ -41,7 +41,7 @@
 #elif defined(CORRADE_TARGET_EMSCRIPTEN)
 #include <Magnum/Platform/EmscriptenApplication.h>
 #else
-#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/Platform/GlfwApplication.h>
 #endif
 
 namespace Magnum { namespace Examples {
