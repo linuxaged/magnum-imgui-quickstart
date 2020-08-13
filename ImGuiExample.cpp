@@ -31,6 +31,7 @@
     CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 #include <imgui.h>
+#include <imgui_internal.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
@@ -89,6 +90,8 @@ ImGuiExample::ImGuiExample(const Arguments& arguments): Platform::Application{ar
         const_cast<char*>(font.data()), font.size(),
         16.0f * framebufferSize().x() / size.x(), &fontConfig,
         ImGui::GetIO().Fonts->GetGlyphRangesChineseFull());
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 
     _imgui = ImGuiIntegration::Context(*ImGui::GetCurrentContext(), size,
         windowSize(), framebufferSize());
@@ -100,11 +103,6 @@ ImGuiExample::ImGuiExample(const Arguments& arguments): Platform::Application{ar
         GL::Renderer::BlendEquation::Add);
     GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha,
         GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-
-    #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
-    /* Have some sane speed, please */
-    setMinimalLoopPeriod(16);
-    #endif
 }
 
 void ImGuiExample::drawEvent() {
@@ -118,35 +116,72 @@ void ImGuiExample::drawEvent() {
     else if(!ImGui::GetIO().WantTextInput && isTextInputActive())
         stopTextInput();
 
-    /* 1. Show a simple window.
-       Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appear in
-       a window called "Debug" automatically */
     {
-        ImGui::Text("Hello, world!");
-        ImGui::SliderFloat("Float", &_floatValue, 0.0f, 1.0f);
-        if(ImGui::ColorEdit3("Clear Color", _clearColor.data()))
-            GL::Renderer::setClearColor(_clearColor);
-        if(ImGui::Button("Test Window"))
-            _showTestWindow ^= true;
-        if(ImGui::Button("Another Window"))
-            _showAnotherWindow ^= true;
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-            1000.0/Double(ImGui::GetIO().Framerate), Double(ImGui::GetIO().Framerate));
-    }
+        static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
 
-    /* 2. Show another simple window, now using an explicit Begin/End pair */
-    if(_showAnotherWindow) {
-        ImGui::SetNextWindowSize(ImVec2(500, 100), ImGuiCond_FirstUseEver);
-        ImGui::Begin("Another Window", &_showAnotherWindow);
-        ImGui::Text("Hello");
+        // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
+        // because it would be confusing to have two docking targets within each others.
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->Pos);
+        ImGui::SetNextWindowSize(viewport->Size);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+
+        // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background and handle the pass-thru hole, so we ask Begin() to not render a background.
+        if(dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+            window_flags |= ImGuiWindowFlags_NoBackground;
+
+        // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
+        // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive, 
+        // all active windows docked into it will lose their parent and become undocked.
+        // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise 
+        // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        ImGui::Begin("DockSpace", nullptr, window_flags);
+        ImGui::PopStyleVar();
+        ImGui::PopStyleVar(2);
+
+        // DockSpace
+        {
+            ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+            static auto first_time = true;
+            if(first_time) {
+                first_time = false;
+
+                ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
+                ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+                ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
+
+                // split the dockspace into 2 nodes -- DockBuilderSplitNode takes in the following args in the following order
+                //   window ID to split, direction, fraction (between 0 and 1), the final two setting let's us choose which id we want (which ever one we DON'T set as NULL, will be returned by the function)
+                //                                                              out_id_at_dir is the id of the node in the direction we specified earlier, out_id_at_opposite_dir is in the opposite direction
+                auto dock_id_left = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Left, 0.2f, nullptr, &dockspace_id);
+                auto dock_id_down = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.25f, nullptr, &dockspace_id);
+
+                // we now dock our windows into the docking node we made above
+                ImGui::DockBuilderDockWindow("Down", dock_id_down);
+                ImGui::DockBuilderDockWindow("Left", dock_id_left);
+                ImGui::DockBuilderFinish(dockspace_id);
+            }
+        }
+
         ImGui::End();
-    }
 
-    /* 3. Show the ImGui test window. Most of the sample code is in
-       ImGui::ShowTestWindow() */
-    if(_showTestWindow) {
-        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
-        ImGui::ShowDemoWindow();
+        ImGui::Begin("Left");
+        ImGui::Text("Hello, left!");
+        ImGui::End();
+
+        ImGui::Begin("Down");
+        ImGui::Text("Hello, down!");
+        ImGui::End();
     }
 
     /* Set appropriate states. If you only draw imgui UI, it is sufficient to
