@@ -43,6 +43,7 @@ endif()
 find_package(Corrade REQUIRED Main)
 find_package(Magnum REQUIRED GL)
 find_package(MagnumIntegration REQUIRED ImGui)
+find_package(unofficial-angle CONFIG REQUIRED)
 
 if(CORRADE_TARGET_ANDROID)
     find_package(Magnum REQUIRED AndroidApplication)
@@ -61,7 +62,11 @@ target_link_libraries(magnum-imgui PRIVATE
     Magnum::Application
     Magnum::GL
     Magnum::Magnum
-    MagnumIntegration::ImGui)
+    MagnumIntegration::ImGui
+    unofficial::angle::libEGL
+    unofficial::angle::libANGLE
+    unofficial::angle::libGLESv2
+    unofficial::angle::angle_common)
 
 install(TARGETS magnum-imgui DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
 

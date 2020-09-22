@@ -35,6 +35,7 @@
 #include <Magnum/Math/Color.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
+#include <Magnum/GL/Version.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
 
 #ifdef CORRADE_TARGET_ANDROID
@@ -77,7 +78,8 @@ class ImGuiExample: public Platform::Application {
 
 ImGuiExample::ImGuiExample(const Arguments& arguments): Platform::Application{arguments,
     Configuration{}.setTitle("Magnum ImGui Example")
-                   .setWindowFlags(Configuration::WindowFlag::Resizable)}
+                   .setWindowFlags(Configuration::WindowFlag::Resizable),
+    GLConfiguration{}.setVersion(GL::Version::GLES200)}
 {
     ImGui::CreateContext();
     const Vector2 size = Vector2{windowSize()} / dpiScaling();
