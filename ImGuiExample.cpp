@@ -79,7 +79,7 @@ class ImGuiExample: public Platform::Application {
 ImGuiExample::ImGuiExample(const Arguments& arguments): Platform::Application{arguments,
     Configuration{}.setTitle("Magnum ImGui Example")
                    .setWindowFlags(Configuration::WindowFlag::Resizable),
-    GLConfiguration{}.setVersion(GL::Version::GLES200)}
+    GLConfiguration{}}
 {
     ImGui::CreateContext();
     const Vector2 size = Vector2{windowSize()} / dpiScaling();
@@ -166,11 +166,13 @@ void ImGuiExample::drawEvent() {
                 //   window ID to split, direction, fraction (between 0 and 1), the final two setting let's us choose which id we want (which ever one we DON'T set as NULL, will be returned by the function)
                 //                                                              out_id_at_dir is the id of the node in the direction we specified earlier, out_id_at_opposite_dir is in the opposite direction
                 auto dock_id_scene_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.25f, nullptr, &dockspace_id);
+                auto dock_id_scene_right2 = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.25f, nullptr, &dockspace_id);
                 auto dock_id_scene_down = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.5f, nullptr, &dockspace_id);
 
                 // we now dock our windows into the docking node we made above
                 ImGui::DockBuilderDockWindow("SceneUp", dockspace_id);
                 ImGui::DockBuilderDockWindow("Right", dock_id_scene_right);
+                ImGui::DockBuilderDockWindow("Right2", dock_id_scene_right2);
                 ImGui::DockBuilderDockWindow("SceneDown", dock_id_scene_down);
                 ImGui::DockBuilderFinish(dockspace_id);
             }
@@ -188,6 +190,10 @@ void ImGuiExample::drawEvent() {
 
         ImGui::Begin("Right");
         ImGui::Text("Hello, Right!");
+        ImGui::End();
+
+        ImGui::Begin("Right2");
+        ImGui::Text("Hello, Right2!");
         ImGui::End();
     }
 
