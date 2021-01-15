@@ -1,12 +1,17 @@
 [submodule "corrade"]
 	path = corrade
 	url = https://github.com/linuxaged/corrade.git
+	branch = master
 [submodule "magnum"]
 	path = magnum
 	url = https://github.com/linuxaged/magnum.git
 [submodule "imgui"]
 	path = imgui
 	url = https://github.com/linuxaged/imgui.git
+	branch = docking
 [submodule "magnum-integration"]
 	path = magnum-integration
 	url = https://github.com/linuxaged/magnum-integration.git
+	branch = fix-imgui
+[submodule "magum"]
+	branch = master
