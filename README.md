@@ -2,6 +2,11 @@
 
 ## Build
 
+* clone
+
+		git clone https://github.com/linuxaged/magnum-imgui-quickstart.git
+		git submodule update --init --recursive
+
 * install dependencies
 
 		vcpkg install glfw3 --triplet x64-windows
