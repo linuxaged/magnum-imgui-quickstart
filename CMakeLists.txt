@@ -40,6 +40,24 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/modules/" ${CMAKE_MODULE_PATH})
 endif()
 
+if(WIN32)
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
+endif()
+
+# Corrade
+set(WITH_TESTSUITE OFF CACHE BOOL "" FORCE)
+add_subdirectory(corrade EXCLUDE_FROM_ALL)
+# Magnum
+set(TARGET_DESKTOP_GLES ON CACHE BOOL "" FORCE)
+set(WITH_GLFWAPPLICATION ON CACHE BOOL "" FORCE)
+add_subdirectory(magnum EXCLUDE_FROM_ALL)
+# Magnum-Integration
+set(IMGUI_DIR ${PROJECT_SOURCE_DIR}/imgui)
+set(WITH_IMGUI ON CACHE BOOL "" FORCE)
+add_subdirectory(magnum-integration EXCLUDE_FROM_ALL)
+
 find_package(Corrade REQUIRED Main)
 find_package(Magnum REQUIRED GL)
 find_package(MagnumIntegration REQUIRED ImGui)

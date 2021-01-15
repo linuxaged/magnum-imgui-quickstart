@@ -1,0 +1,12 @@
+[submodule "corrade"]
+	path = corrade
+	url = https://github.com/linuxaged/corrade.git
+[submodule "magnum"]
+	path = magnum
+	url = https://github.com/linuxaged/magnum.git
+[submodule "imgui"]
+	path = imgui
+	url = https://github.com/linuxaged/imgui.git
+[submodule "magnum-integration"]
+	path = magnum-integration
+	url = https://github.com/linuxaged/magnum-integration.git
