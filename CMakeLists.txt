@@ -72,7 +72,7 @@ endif()
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 corrade_add_resource(Resources resources.conf)
-add_executable(magnum-imgui ${Resources} ImGuiExample.cpp)
+add_executable(magnum-imgui ${Resources} src/ImGuiExample.cpp)
 
 target_link_libraries(magnum-imgui PRIVATE
     Corrade::Main
