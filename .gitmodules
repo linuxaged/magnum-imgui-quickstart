@@ -5,6 +5,7 @@
 [submodule "magnum"]
 	path = magnum
 	url = https://github.com/linuxaged/magnum.git
+	branch = master
 [submodule "imgui"]
 	path = imgui
 	url = https://github.com/linuxaged/imgui.git
@@ -13,5 +14,3 @@
 	path = magnum-integration
 	url = https://github.com/linuxaged/magnum-integration.git
 	branch = fix-imgui
-[submodule "magum"]
-	branch = master
