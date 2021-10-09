@@ -32,6 +32,9 @@ public:
     void blit() {
         _offscreen.blit();
     }
+    bool update() {
+        return _camera.update();
+    }
     void draw() {
         _camera.draw(getDrawableOrigin());
         _camera.draw(getDrawableSegment());
@@ -42,6 +45,7 @@ public:
     Magnum::GL::Texture2D& getTexture() {
         return _offscreen.renderTexture;
     }
+    Magnum::Examples::ArcBallCamera& getCamera() { return _camera; }
 private:
 	struct Vertex {
 		Magnum::Vector3 pos;

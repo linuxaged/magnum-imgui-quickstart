@@ -33,12 +33,16 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 #include <Corrade/Containers/Pointer.h>
+#include <Corrade/Containers/ArrayView.h>
+#include <Magnum/Math/Functions.h>
+#include <Magnum/Math/FunctionsBatch.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/Version.h>
+#include <Magnum/GL/PixelFormat.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
-
+#include <Magnum/Image.h>
 #ifdef CORRADE_TARGET_ANDROID
 #include <Magnum/Platform/AndroidApplication.h>
 #elif defined(CORRADE_TARGET_EMSCRIPTEN)
@@ -73,7 +77,6 @@ class ImGuiExample: public Platform::Application {
         void mouseMoveEvent(MouseMoveEvent& event) override;
         void mouseScrollEvent(MouseScrollEvent& event) override;
         void textInputEvent(TextInputEvent& event) override;
-
     private:
         ImGuiIntegration::Context _imgui{NoCreate};
         WindowMain _windowMain;
@@ -127,11 +130,11 @@ void ImGuiExample::drawEvent() {
     GL::Renderer::setBlendFunction(
         GL::Renderer::BlendFunction::SourceAlpha,
         GL::Renderer::BlendFunction::OneMinusSourceAlpha);
-    {
-        g_Renderer->bind();
-        g_Renderer->draw();
-        g_Renderer->blit();
-    }
+
+    g_Renderer->bind();
+    bool camChanged = g_Renderer->update();
+    g_Renderer->draw();
+    g_Renderer->blit();
 
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
@@ -164,7 +167,7 @@ void ImGuiExample::drawEvent() {
     GL::Renderer::disable(GL::Renderer::Feature::Blending);
 
     swapBuffers();
-    redraw();
+    if(camChanged) redraw();
 }
 
 void ImGuiExample::viewportEvent(ViewportEvent& event) {
@@ -183,7 +186,15 @@ void ImGuiExample::keyReleaseEvent(KeyEvent& event) {
 }
 
 void ImGuiExample::mousePressEvent(MouseEvent& event) {
-    if(_imgui.handleMousePressEvent(event)) return;
+    if(event.button() != MouseEvent::Button::Left)
+        return;
+
+    _imgui.handleMousePressEvent(event);
+    if(_sceneHovered) {
+        g_Renderer->getCamera().initTransformation(event.position());
+    }
+    event.setAccepted();
+    redraw();
 }
 
 void ImGuiExample::mouseReleaseEvent(MouseEvent& event) {
@@ -191,14 +202,34 @@ void ImGuiExample::mouseReleaseEvent(MouseEvent& event) {
 }
 
 void ImGuiExample::mouseMoveEvent(MouseMoveEvent& event) {
-    if(_imgui.handleMouseMoveEvent(event)) return;
+    if(!event.buttons()) return;
+
+    if(event.buttons() & MouseMoveEvent::Button::Left) {
+            if(_sceneHovered) {
+                if(!event.buttons()) return;
+
+                if(event.modifiers() & MouseMoveEvent::Modifier::Shift)
+                    g_Renderer->getCamera().translate(event.position());
+                else
+                    g_Renderer->getCamera().rotate(event.position());
+            }
+    }
+
+    _imgui.handleMouseMoveEvent(event);
+    event.setAccepted();
+    redraw();
 }
 
 void ImGuiExample::mouseScrollEvent(MouseScrollEvent& event) {
-    if(_imgui.handleMouseScrollEvent(event)) {
-        /* Prevent scrolling the page */
+    _imgui.handleMouseScrollEvent(event);
+
+    if(_sceneHovered) {
+        const Float delta = event.offset().y();
+        if(Math::abs(delta) < 1.0e-2f)
+            return;
+        g_Renderer->getCamera().zoom(delta * 2.0f);
         event.setAccepted();
-        return;
+        redraw();
     }
 }
 
