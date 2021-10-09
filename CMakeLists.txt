@@ -57,10 +57,15 @@ add_subdirectory(magnum EXCLUDE_FROM_ALL)
 set(IMGUI_DIR ${PROJECT_SOURCE_DIR}/imgui)
 set(WITH_IMGUI ON CACHE BOOL "" FORCE)
 add_subdirectory(magnum-integration EXCLUDE_FROM_ALL)
+#
+set(WITH_STLIMPORTER ON CACHE BOOL "" FORCE)
+set(BUILD_PLUGINS_STATIC ON CACHE BOOL "" FORCE)
+add_subdirectory(magnum-plugins EXCLUDE_FROM_ALL)
 
 find_package(Corrade REQUIRED Main)
-find_package(Magnum REQUIRED GL)
+find_package(Magnum REQUIRED GL SceneGraph Shaders Trade)
 find_package(MagnumIntegration REQUIRED ImGui)
+find_package(MagnumPlugins REQUIRED StlImporter)
 
 if(CORRADE_TARGET_ANDROID)
     find_package(Magnum REQUIRED AndroidApplication)
@@ -72,17 +77,32 @@ endif()
 
 set_directory_properties(PROPERTIES CORRADE_USE_PEDANTIC_FLAGS ON)
 corrade_add_resource(Resources resources.conf)
-add_executable(magnum-imgui ${Resources} src/ImGuiExample.cpp)
+add_executable(${PROJECT_NAME}
+    ${Resources}
+    src/ArcBall.h
+    src/ArcBall.cpp
+    src/Renderer.h
+    src/Renderer.cpp
+    src/ui/WindowJobs.h
+    src/ui/WindowJobs.cpp
+    src/ui/WindowMain.h
+    src/ui/WindowMain.cpp
+    src/ImGuiExample.cpp
+)
 
-target_link_libraries(magnum-imgui PRIVATE
+target_link_libraries(${PROJECT_NAME} PRIVATE
     Corrade::Main
     Magnum::Application
     Magnum::GL
     Magnum::Magnum
     MagnumIntegration::ImGui
+    Magnum::SceneGraph
+    Magnum::Shaders
+    Magnum::Trade
+    MagnumPlugins::StlImporter
 )
 
-install(TARGETS magnum-imgui DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
+install(TARGETS ${PROJECT_NAME} DESTINATION ${MAGNUM_BINARY_INSTALL_DIR})
 
 # Make the executable a default target to build & run in Visual Studio
-set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT magnum-imgui)
+set_property(DIRECTORY ${PROJECT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})

@@ -14,3 +14,7 @@
 	path = magnum-integration
 	url = https://github.com/linuxaged/magnum-integration.git
 	branch = fix-imgui
+[submodule "magnum-plugins"]
+	path = magnum-plugins
+	url = https://github.com/mosra/magnum-plugins.git
+	branch = master

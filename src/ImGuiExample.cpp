@@ -32,6 +32,7 @@
 */
 #include <imgui.h>
 #include <imgui_internal.h>
+#include <Corrade/Containers/Pointer.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
@@ -45,6 +46,12 @@
 #else
 #include <Magnum/Platform/GlfwApplication.h>
 #endif
+
+#include "Renderer.h"
+#include "ui/WindowMain.h"
+
+Corrade::Containers::Pointer<Renderer> g_Renderer;
+Scene3D g_Scene;
 
 namespace Magnum { namespace Examples {
 
@@ -69,7 +76,8 @@ class ImGuiExample: public Platform::Application {
 
     private:
         ImGuiIntegration::Context _imgui{NoCreate};
-
+        WindowMain _windowMain;
+        bool _sceneHovered = false;
         bool _showTestWindow = true;
         bool _showAnotherWindow = false;
         Color4 _clearColor = 0x72909aff_rgbaf;
@@ -98,6 +106,8 @@ ImGuiExample::ImGuiExample(const Arguments& arguments): Platform::Application{ar
     _imgui = ImGuiIntegration::Context(*ImGui::GetCurrentContext(), size,
         windowSize(), framebufferSize());
 
+    g_Renderer.reset(new Renderer(g_Scene, framebufferSize()));
+    g_Renderer->loadStl("D:/ExportSTL/UQGB/UQGB--P-L9.STL");
     /* Set up proper blending to be used by ImGui. There's a great chance
        you'll need this exact behavior for the rest of your scene. If not, set
        this only for the drawFrame() call. */
@@ -108,6 +118,21 @@ ImGuiExample::ImGuiExample(const Arguments& arguments): Platform::Application{ar
 }
 
 void ImGuiExample::drawEvent() {
+    /*
+    * Render 3D scene into a MSAA framebuffer
+    */
+    GL::Renderer::enable(GL::Renderer::Feature::Blending);
+    GL::Renderer::setBlendEquation(GL::Renderer::BlendEquation::Add,
+                                   GL::Renderer::BlendEquation::Add);
+    GL::Renderer::setBlendFunction(
+        GL::Renderer::BlendFunction::SourceAlpha,
+        GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    {
+        g_Renderer->bind();
+        g_Renderer->draw();
+        g_Renderer->blit();
+    }
+
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
     _imgui.newFrame();
@@ -119,82 +144,7 @@ void ImGuiExample::drawEvent() {
         stopTextInput();
 
     {
-        static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
-
-        // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
-        // because it would be confusing to have two docking targets within each others.
-        ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-
-        ImGuiViewport* viewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(viewport->Pos);
-        ImGui::SetNextWindowSize(viewport->Size);
-        ImGui::SetNextWindowViewport(viewport->ID);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
-
-        // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background and handle the pass-thru hole, so we ask Begin() to not render a background.
-        if(dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-            window_flags |= ImGuiWindowFlags_NoBackground;
-
-        // Important: note that we proceed even if Begin() returns false (aka window is collapsed).
-        // This is because we want to keep our DockSpace() active. If a DockSpace() is inactive, 
-        // all active windows docked into it will lose their parent and become undocked.
-        // We cannot preserve the docking relationship between an active window and an inactive docking, otherwise 
-        // any change of dockspace/settings would lead to windows being stuck in limbo and never being visible.
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-        ImGui::Begin("DockSpace", nullptr, window_flags);
-        ImGui::PopStyleVar();
-        ImGui::PopStyleVar(2);
-
-        // DockSpace
-        {
-            ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-            ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-
-            static auto first_time = true;
-            if(first_time) {
-                first_time = false;
-
-                ImGui::DockBuilderRemoveNode(dockspace_id); // clear any previous layout
-                ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-                ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
-
-                // split the dockspace into 2 nodes -- DockBuilderSplitNode takes in the following args in the following order
-                //   window ID to split, direction, fraction (between 0 and 1), the final two setting let's us choose which id we want (which ever one we DON'T set as NULL, will be returned by the function)
-                //                                                              out_id_at_dir is the id of the node in the direction we specified earlier, out_id_at_opposite_dir is in the opposite direction
-                auto dock_id_scene_right = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.25f, nullptr, &dockspace_id);
-                auto dock_id_scene_right2 = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Right, 0.25f, nullptr, &dockspace_id);
-                auto dock_id_scene_down = ImGui::DockBuilderSplitNode(dockspace_id, ImGuiDir_Down, 0.5f, nullptr, &dockspace_id);
-
-                // we now dock our windows into the docking node we made above
-                ImGui::DockBuilderDockWindow("SceneUp", dockspace_id);
-                ImGui::DockBuilderDockWindow("Right", dock_id_scene_right);
-                ImGui::DockBuilderDockWindow("Right2", dock_id_scene_right2);
-                ImGui::DockBuilderDockWindow("SceneDown", dock_id_scene_down);
-                ImGui::DockBuilderFinish(dockspace_id);
-            }
-        }
-
-        ImGui::End();
-
-        ImGui::Begin("SceneUp");
-        ImGui::Text("Hello, Up!");
-        ImGui::End();
-
-        ImGui::Begin("SceneDown");
-        ImGui::Text("Hello, down!");
-        ImGui::End();
-
-        ImGui::Begin("Right");
-        ImGui::Text("Hello, Right!");
-        ImGui::End();
-
-        ImGui::Begin("Right2");
-        ImGui::Text("Hello, Right2!");
-        ImGui::End();
+        _windowMain.show({_sceneHovered});
     }
 
     /* Set appropriate states. If you only draw imgui UI, it is sufficient to
