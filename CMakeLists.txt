@@ -35,6 +35,8 @@ cmake_minimum_required(VERSION 3.4)
 
 project(MagnumImGuiExample CXX)
 
+set(CMAKE_CXX_STANDARD 20)
+
 # Add module path in case this is project root
 if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/modules/" ${CMAKE_MODULE_PATH})
