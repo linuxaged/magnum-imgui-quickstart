@@ -56,8 +56,8 @@ set(TARGET_DESKTOP_GLES ON CACHE BOOL "" FORCE)
 set(WITH_GLFWAPPLICATION ON CACHE BOOL "" FORCE)
 add_subdirectory(magnum EXCLUDE_FROM_ALL)
 # Magnum-Integration
-set(IMGUI_DIR ${PROJECT_SOURCE_DIR}/imgui)
-set(WITH_IMGUI ON CACHE BOOL "" FORCE)
+set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/imgui)
+set(MAGNUM_WITH_IMGUI ON CACHE BOOL "" FORCE)
 add_subdirectory(magnum-integration EXCLUDE_FROM_ALL)
 
 find_package(Corrade REQUIRED Main)
