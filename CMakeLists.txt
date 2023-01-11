@@ -42,16 +42,70 @@ if(PROJECT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/modules/" ${CMAKE_MODULE_PATH})
 endif()
 
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY $<1:${PROJECT_SOURCE_DIR}/bin/$<CONFIG>>)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY $<1:${PROJECT_SOURCE_DIR}/bin/$<CONFIG>>)
+
 if(WIN32)
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8")
+    # for Corrade, Magnum
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /utf-8 /wd4312")
+    add_definitions(-D_SILENCE_CXX20_CISO646_REMOVED_WARNING)
+    # https://github.com/juj/MathGeoLib/blob/master/CommonOptions.cmake
+    # Perform extremely aggressive optimization on Release builds:
+    # Flags on Visual Studio 2010 and newer:
+    # Runtime library: Multi-threaded (/MT) as opposed to default 'Multi-threaded DLL' - static runtime library allows better LTCG inlining opportunities.
+    # Optimization: Full Optimization (/Ox)
+    # Inline Function Expansion: Any Suitable (/Ob2)
+    # Enable Intrinsic Functions: Yes (/Oi)
+    # Favor Size Or Speed: Favor fast code (/Ot)
+    # Enable Fiber-Safe Optimizations: Yes (/GT)
+    # Enable String Pooling: Yes (/GF)
+    # Buffer Security Check: No (/GS-)
+    # Floating Point Model: Fast (/fp:fast)
+    # Enable Floating Point Exceptions: No (/fp:except-)
+    # Build with Multiple Processes (/MP)
+    # Whole Program Optimization: Yes (/GL)
+    set(relFlags "/O2 /Ob3 /Oi /Ot /GT /GF /GS- /MP /GL /arch:AVX2 /openmp:experimental")
+    # Omit Frame Pointers: Yes (/Oy)
+    set(CMAKE_C_FLAGS_RELEASE     "${CMAKE_C_FLAGS_RELEASE} /Oy ${relFlags}")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Oy ${relFlags}")
+
+    string(REGEX REPLACE "/Ob1" "" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+    string(REGEX REPLACE "/Ob1" "" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+    string(REPLACE "/Ob0" "/Ob1" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+
+    # Don't omit frame pointers, but add Debug database (/Zi).
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO     "${CMAKE_C_FLAGS_RELWITHDEBINFO} /Zi ${relFlags}")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Zi ${relFlags}")
+
+    # Disable Incremental Linking (/INCREMENTAL:NO) This is incompatible with LTCG, but RelWithDebInfo has this default on.
+    # Perform identical COMDAT folding (/OPT:ICF)
+    set(relLinkFlags "/LTCG /INCREMENTAL:NO /OPT:ICF /OPT:REF /PDBCOMPRESS")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} ${relLinkFlags}")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} ${relLinkFlags}")
+    set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} ${relLinkFlags}")
+
+    set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} ${relLinkFlags}")
+    set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} ${relLinkFlags}")
+    set(CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO} ${relLinkFlags}")
+
+    # turn off Exceptions (including in STL) https://gitlab.kitware.com/cmake/cmake/-/issues/20610
+    string(REGEX REPLACE "/EHsc" "/EHs-c-" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    add_definitions(-D_HAS_EXCEPTIONS=0) # for STL
+
+    # https://ledas.com/post/861-fast-debug-in-visual-c/
+    string(REPLACE "/RTC1" "" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+    string(REPLACE "/W3" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+elseif(EMSCRIPTEN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-old-style-cast")
 endif()
 
 # Corrade
+set(CORRADE_BUILD_STATIC ON CACHE BOOL "" FORCE)
 set(WITH_TESTSUITE OFF CACHE BOOL "" FORCE)
 add_subdirectory(corrade EXCLUDE_FROM_ALL)
 # Magnum
+set(MAGNUM_BUILD_STATIC ON CACHE BOOL "" FORCE)
+set(MAGNUM_BUILD_PLUGINS_STATIC ON CACHE BOOL "" FORCE)
 set(TARGET_DESKTOP_GLES ON CACHE BOOL "" FORCE)
 set(WITH_GLFWAPPLICATION ON CACHE BOOL "" FORCE)
 add_subdirectory(magnum EXCLUDE_FROM_ALL)
